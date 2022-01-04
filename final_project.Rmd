@@ -1,0 +1,309 @@
+---
+title: "Final Project: Are First-borns Superior?"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+
+
+$\\$
+
+
+
+## Author:  Jenny Pan
+
+
+```{r message=FALSE, warning=FALSE, tidy=TRUE, echo=FALSE}
+
+library(knitr)
+
+# This makes sure the code is wrapped to fit when it creates a pdf
+opts_chunk$set(tidy.opts=list(width.cutoff=60))   
+opts_chunk$set(fig.width=8, fig.height=4) 
+
+
+# Set the random number generator to always give the same random numbers
+set.seed(230)  
+
+
+```
+
+
+## Introduction 
+
+
+Are first-born siblings smarter, better, or cooler than their younger ones? In my family, this is a question that is often discussed around the dinner table. As a younger sibling, I passionately resent and disagree with this statement (and of course, my parents would agree!), but what does a more rigorous analysis suggest? On one hand, research suggests that first-born children enjoy more parental attention and investment. Anecdotes from parents corroborates this fact. Does enjoying more parental attention mean that first-born children are more successful than their younger ones? On the other hand, we cannot forget that first-born children are also the children to first-time parents. Younger siblings have the advantage of more experienced, mature, and possible more financially-stable parents. From these two perspectives, the jury’s still out on whether the first-born is the better sibling. Is it better to have more doting parents, or more experienced parents? Does it not matter? However, through analyzing online personality surveys, we can get a better insight on these pressing questions.
+ 
+The data is from the [Firstborn Personality Test from the Open-Source Psychometrics Project](https://openpsychometrics.org/tests/birthorder/development/). In the personality test, participants were asked a series of 25 questions relating to intellect (questions mostly focus on intellect), openness to experience, extroversion, emotional stability, agreeableness, and conscientiousness. The questions that were included in the study are listed in the link I provided. Each question was on a 5 point likert scale, and the greater the total score, the more likely you are to have a “firstborn personality”.
+ 
+As a preface, the survey is not making a qualitative judgement on which traits are associated “better”. What personality traits are considered “better” is a matter of personal opinion. They are simply noting whether there is a difference in personality between first-borns and younger siblings. The source of my data did do a preliminary analysis and data visualization using the data, but not more in depth methods. I haven’t seen somebody else do an analysis with this dataset in particular, but perhaps I wasn’t looking hard enough. Despite this, this topic (whether birth order has an effect on personality) is of interest to a lot of researchers. There are dozens of journal articles online investigating the same topic, however, they did not use this dataset.
+   
+    
+## Results
+### Data wrangling: Mutating to get new columns for analysis
+
+
+```{r message=FALSE, warning=FALSE, tidy=TRUE}
+library(dplyr)
+#making a dummy variable. 0 represents non first-born children, 1 represents first-born children
+fbps <- read.csv("FBPS_ValidationData.csv")
+
+fbps_1 <- fbps %>% mutate(first_born = ifelse(fbps$birthpos == 1, 1, 0), total_score = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12+Q13+Q14+Q15+Q16+Q17+Q18+Q19+Q20+Q21+Q22+Q23+Q24+Q25+Q26) %>% filter(total_score != 0)
+
+#make the first_born variable as a factor
+fbps_1 <- fbps_1 %>% mutate(first_born = as.factor(fbps_1$first_born))
+
+```
+
+I downloaded the data as a csv and then imported it into R for analysis. The dataset was mostly already cleaned, but I needed to add a few things for the analysis.There were 89 variables and 41841 cases in the original dataset. The variables included how the participant responded to Q1-Q26, age, if English was their native language, gender, birth position, how many kids in the family, submit time, time spent. There were also answers to questions to a host survey (there variables start with EXT, EST, AG, CSN, OPN) which were irrelevant for my purposes. 
+
+For outliers, I took out cases with a total score of 0 because that means that the particpant never answered any of the questions in the personality test. Their results would not be insightful in addressing questions of interest. In the original dataset, there was a column indicating the participant's birth order (i.e. 1 = first-born, 2 = second-born, etc). Since I want to compare first-borns with younger siblings, I needed to create a dummy variable (first_born) that codes first-borns as a 1, and younger siblings as a 0. I also needed to calculate the total score the particpant received on the test, as this was not already provided for us. Finally, I made my dummy variable (first_born) into a factor so R recognizes it as a categorical variable. 
+
+
+### Visualize the data: Density Curves & Jitter Plot
+
+
+```{r message=FALSE, warning=FALSE, tidy=TRUE}
+
+library(ggplot2)
+
+#making data frames with just first borns and with just younger sibs
+first_born_df <- fbps_1 %>% filter(first_born == 1)
+younger_sibs_df <- fbps_1 %>% filter(first_born == 0)
+
+#making the density curve for the the first_born data
+x1 <- sort(first_born_df$total_score)
+y1 <- dnorm(x1, mean(x1), sd(x1))
+
+#making the density curve for the younger_sibs data
+x2 <- sort(younger_sibs_df$total_score)
+y2 <- dnorm(x2, mean(x2), sd(x2))
+
+#plotting the density curves on top of each other
+plot(x1,y1, type = 'l', col = "blue",
+     main = "Distributions of Scores for First-borns
+     and Younger Siblings",
+     xlab = "Scores",
+     ylab = "Density")
+lines(x2, y2, type = 'l', col = "red")
+legend(1, .030, legend=c("First-borns", "Younger siblings"),
+       col=c("blue", "red"), lty=1:1, cex=0.8)
+
+
+#making a jitter plot visualization
+ggplot(fbps_1, aes(x = total_score, y = first_born, col = first_born)) +
+  geom_jitter(alpha = .1, position = position_jitter(height = .2)) +
+  ggtitle("Personality Scores for First-Borns and Younger Sibilings") +
+  xlab("Total Score") +
+  ylab("First Born?")
+
+```
+
+
+Plotting the histograms of first_born data and younger_sibs data, I noticed that these histograms were approximately normal (see it in the appendix!). I then decided to plot the density curve of the normal distribution from the data. From the distributions of the density curves above, we see that the first-born distribution (in blue) is shifted to the right of the younger siblings distribution (in red). Although the effect is small, it suggests that first-borns may score a higher on the personality test than younger siblings. 
+
+From the jitter plot, it's even more clear that the distributions for first-borns and younger siblings are practically the same. The distribution of the first-born is shifted a little to the right compared to the distribution of the younger siblings, suggesting that first borns might be a little more likely to score higher on this personality test than younger siblings, but the shift is marginal. Comparing the jitter plot to the histogram, I think the jitter plot does a better job at communicating the spread of the data. That's why I decided to include both. 
+
+
+### Analyses: Hypothesis Test & Logistic Regression
+**Hypothesis Test: Is there a difference between the scores of first-borns and younger siblings?**
+```{r message=FALSE, warning=FALSE, tidy=TRUE}
+#check conditions
+#sample size?
+(n1 <- nrow(first_born_df))
+(n2 <- nrow(younger_sibs_df))
+
+#equal sds?
+(sd_1 <- sd(first_born_df$total_score))
+(sd_2 <- sd(younger_sibs_df$total_score))
+
+#running a t-test
+t.test(total_score ~ first_born, alternative = "two.sided", data = fbps_1)
+```
+
+The assumptions for the t-test is that the data comes from a simple random sample. This might not be true because not everyone has an equal probability of taking the test (people who take it are perhaps interested in the topic, interested in proving a point, referred by a friend), but the each case is certainly independent of one another. Next, the data are normal. Looking at the plot made in the data visualization part, we see that when graphed, the data are normal. Next, we have a large sample size, as each group has well over 20,000 cases. Although Welch's t-test does not assume equal variances, our two groups have approximately equal variances as given by the values of standard deviation above.Even though our data satisfies most of the assumptions, as we learned in class, t-tests are fairly robust to violations in assumptions, so I feel very comfortable using this test.
+
+
+$H_0: \mu_{first born} - \mu_{younger sibs} = 0 \\$
+$H_A: \mu_{first born} - \mu_{younger sibs} \neq 0\\$
+The null hypothesis is that there is no difference between the personality scores of first-born children and younger siblings. The alternative hypothesis is that there is a difference between the personality scores of first-born children and younger siblings. Running a two sided t-test, with a p-value of close to 0, I conclude that there is evidence to suggest that there is a difference between the personality scores of first-born children and younger children, with first-born children scores being slightly higher ($\mu_{first born} =80.43420$, $\mu_{younger siblings} = 77.75844$).
+
+**Logistic Regression: Can I predict who's a first-born and who's a younger sibling given their scores for specific questions?**
+
+```{r message=FALSE, warning=FALSE, tidy=TRUE}
+
+library(cvms)
+#train on 80% of data and test on 20%
+indexSet <- sample(2, nrow(fbps_1), replace = TRUE, prob = c(0.8, 0.2))
+#create training set
+train <- fbps_1[indexSet ==1,]
+#create test set
+test <- fbps_1[indexSet == 2,]
+
+#Fit a model and train the model
+lr_fit <- glm(first_born ~ total_score, data = train, family = "binomial")
+#summary(lr_fit) too long, put in appendix
+
+#Test the model
+p <- predict(lr_fit, test, type = "response")
+
+pred <- ifelse(p > 0.5, 1, 0)
+pred_table <- table(Predicted = pred, Actual = test$first_born)
+
+cfm <- as_tibble(pred_table)
+
+plot_confusion_matrix(cfm, target_col = "Actual", 
+                      prediction_col = "Predicted",
+                      counts_col = "n")
+
+pred_vals <- as.numeric(pred_table)
+
+#Find the accuracy (# of correct/total #)
+(accuracy <- (pred_vals[1] + pred_vals[4]) /(nrow(test)))
+
+```
+
+My data meets most of the assumptions of logistic regression. First, the response variable (whether you are first_born or not) only takes on two possible outcomes. Next, the observations/cases are reasonably independent since each user is taking the test themselves. Next, since there is only one predictor/explantory variable, there is no multicolinearlity. Furthermore, there are no extreme outliers since we filtered out total scores on 0. Finally, our sample size is sufficiently large. 
+
+
+Using their total score as a predictor for whether a person is first-born or not gives approximately 55% accuracy. 55% is slightly higher than chance, reinforcing the results from the t-test that showed that there is a slight difference between the scores of first-born and younger siblings (with first-borns scoring higher). Having only a 55% accuracy with our model is not because the questions do a bad job, as the test questions were carefully researched and chosen by the creator of the test. Rather, it's because there's not much of a difference between the answers of first-borns and younger siblings to begin with, so it makes predictions hard because it could go either way. Since it was 55% accurate (better than chance), we could say knowing how the participants did on the test, we could make better predictions about whether they were first-born or not than if we knew nothing at all.
+
+**Principal component analysis: Are all these questions necessary to differentiate first-born and younger siblings?**
+```{r message=FALSE, warning=FALSE, tidy=TRUE}
+#preparing our data for pca
+pca_data <- fbps_1 %>% select(Q1, Q2, Q3, Q4, Q5 ,Q6, Q7, Q8, Q9, Q10, Q11, Q12, Q13, Q14, Q15, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23, Q24, Q25, Q26)
+
+#pca
+pca.fbps <- prcomp(pca_data)
+
+summary(pca.fbps)
+#pca.fbps$rotation (way too long! In the appendix)
+
+#screeplot
+plot(pca.fbps$sdev^2/sum(pca.fbps$sdev^2), 
+     type = "o",
+     ylab = "Proportion of the variance explained", 
+     xlab = "PC number",
+     main = "Screeplot for First-born Personality Data")
+
+
+```
+Looking at the PCA results and the screeplot, I notice that it's relatively difficult to reduce the dimension of this data. It seems that most of the variables (questions on the personality test) contribute substantially to the variability in the data. Using a threshold value of capturing 90% of the variability, we would choose 20 principal components. Using 20 principal components would reduce our dimensions by only 6. Since it's "hard" to reduce the dimensions of our data (or we wouldn't reduce it by a lot of dimensions), it suggests that most of these questions "belong" or are necessary in the personality test. This means that the creator of the test did a good job picking questions that serve a purpose in explaining the variability in the data. Furthermore, taking a look at PC1 (the principal component that explains the most variability out of all the other PC's) and its correlation to the questions, the highest correlations are questions related to intellect and challenging oneself. PC2 is most correlated to questions related to extroversion and "coolness" (the opposite of nerdiness). For the analysis of PC1 and PC2, I looked at the rotation of the pc.fbps object (it's too large to print out).
+$\\$
+
+
+
+## Conclusion 
+
+Are first-borns superior that younger siblings? Yes, marginally, but only if you consider traits like higher intellect, greater openness to experience and extroversion to be superior. From the t-test for difference of means, we observed a small, but statistically significant result: that the mean personality scores of first-borns were higher than that of younger siblings. The logistic regression also confirmed that given the personality scores of an individual, we could predict, at greater than chance accuracy, whether that individual is a first-born or not. However, we could only predict at a 55% accuracy rate, which is only 5% greater than chance. One might  argue that this is because the questions on the personality test were not truly capturing traits that would be different between first-borns and younger siblings, but the author of the test made sure to emphasize that these questions were chosen from a much bigger pool and carefully researched. Also through the principal component analysis, we learned that the questions on the personality test were indeed well-chosen because it was hard to reduce the dimensions of the questions. Most of the questions explained a lot of the variability in the data and were "necessary" or belonged in the test. The overarching conclusion that I drew from all these analyses is that first-borns do see marginally higher scores on this personality test, suggesting that they are perhaps smarter, more open to experience, and more extroverted than their younger siblings. However, in practice, this difference is likely meaningless/not obvious. If you meet a new friend and they never explicitly tell you if they are the oldest in the family, you probably wouldn't be able to say with a lot of confidence. 
+
+The main limitation with drawing conclusions from this analysis is how the data was collected. Total scores were collected online with self-reported likert scale ratings on a series of questions. The largest studies on birth order effects on personality have found it to be very small and limited in scope. For example,  Rohrer, Egloff, and Schmukle (2015) found only a 0.1 SD between 1st born and 2nd born children on intellect and openness to experience and no differences in other traits. However, in groups like professors, first-borns are overrepresented and occur more frequently than chance. This difference might be attributed to self-reporting and self-report bias. This data was all self-reported and so was the Rohrer, Egloff, and Schmukle research. My analyses using this data corroborates the results of the Rohrer study. However, looking upon populations like professors and noticing who's a first-born or not is not self-reported. Because of the limitation of how this data was collected, we aren't able to sift the effects of self-reporting. 
+
+For further studies, I would be interested/curious in a study/analysis that addresses the limitation I pointed out about self-report bias. People aren't the most accurate/honest judges of themselves. Perhaps, a study that asks similar personality questions as this test used, but instead of asking the person directly, asking parents, friends, teachers, etc. This would cirucumvent the issue of self-report bias, but perhaps this method would introduce other kinds of bias. 
+
+
+
+
+
+
+
+$\\$
+
+
+
+
+
+
+## Reflection
+
+
+There were a lot of up and down moments with this project. I immediately had a sense of what I project topic I wanted to do. I devoted a lot of time into researching and getting data for it, only to change my project idea at the last minute because the data I had for my original idea wasn't comprehensive enough for an in-depth analysis. I found it frustrating to track down data in usable formats. At the last minute, I switched to this topic idea about first-borns and whether they have different personalities from younger siblings. I really enjoyed choosing what type of analyses would help me answer questions of interest. In the homeworks, choosing analyses/models for to answer questions was always spoonfed to us, but now we had to make decisions on what analyses would help us answer interesting questions. I struggled a lot with interpretation, especially with the primary component analysis because we didn't spend a lot of time going over this concept. It was hard to understand what I should be taking away from the pca object. I also struggled with thinking of good ways to visualize the data that was interesting and intuitive. I wanted to make a visualization that was creative, but I ended up going with distributions that I believe were helpful and easy to interpret. For analyses I did, but didn't end up including was a correlation test/matrix of all the questions. There are just too many variables for this to be meaningful, and correlation only tests relationships between two variables. I instead resorted to doing a primary component analysis instead.
+
+
+$\\$
+
+
+
+
+## Appendix
+
+
+**Sources** $//$
+1. Data from https://openpsychometrics.org/tests/birthorder/development/
+
+2. Victor Lavrenko, YouTube Video on how many dimensions to choose when doing PCA. Retrieved from: https://www.youtube.com/watch?v=KE_fxBCBS3w
+
+3. Dr. Bharatendra Rai, YouTube Video on logistic regression. Retrieved from: https://www.youtube.com/watch?v=AVx7Wc1CQ7Y 
+
+4. UC Buisiness Analytics R Programming Guide, Principal Component Analysis. Retrieved from: https://uc-r.github.io/pca
+
+5. Ludvig Renbo Olsen, Creating a confusion matrix with cvms. Retrieved from: https://cran.r-project.org/web/packages/cvms/vignettes/Creating_a_confusion_matrix.html#manually-creating-a-two-class-confusion-matrix
+
+
+
+
+
+**Histograms for Normality in t-test**
+Normality of data is an assumption for a t-test. Let's use histograms to visually check this!
+```{r message=FALSE, warning=FALSE, tidy=TRUE}
+
+par(mfrow = c(1,2))
+
+hist(first_born_df$total_score, breaks = 100,
+     main = "Personality Scores for First-Borns",
+     xlab = "Total Scores",
+     col = "blue")
+
+hist(younger_sibs_df$total_score, breaks = 100,
+     main = "Personality Scores for Younger Siblings",
+     xlab = "Total Scores",
+     col = "red")
+```
+
+These histograms look approximately normal because they are unimodal and symmetric. 
+
+**Summary for lr_fit in Logistic Regression**
+```{r message=FALSE, warning=FALSE, tidy=TRUE}
+summary(lr_fit)
+```
+The logistic regression shows that for an increase in total_score, the odds of being a first_born increases because the sign on the coefficient is positive (albiet small).
+
+**Principal factor analysis: PC analysis**
+```{r message=FALSE, warning=FALSE, tidy=TRUE}
+a <- pca.fbps$rotation
+
+a[1:26,1:3]
+```
+
+Sorry if it's really long! For PC1, I noticed the highest correlation questions were Q3, 1, 7, and 8. The largest negative correlation questions were Q21 and Q5. The questions are as follows:
+
+Q1	I have read an absurd number of books.(+)
+
+Q3	I love to read challenging material.(+)
+
+Q7	I use difficult words.(+)
+
+Q8	I have a rich vocabulary.(+)
+
+Q21	I find too much thinking exhausting. (-)
+
+Q5	I like simple work. (-)
+
+These questions seem to be related to an individual's intellect. Reading books, using difficult words, liking a challenge, and finding thinking not exhausting are charactersitics I associate with somebody's intellect.
+
+For PC2, I noticed the highest correlation questions was Q2. The highest negative correlations were Q6, Q18, Q12. These questions are as follows:
+
+Q2	I have traveled alone in a foreign country. (+)
+
+Q6	I would rather read a book than go to a party. (-)
+
+Q18	I miss my childhood. (-)
+
+Q12	I like science fiction.(-)
+
+These questions seem to be related to a person's openness to trying new things and extroversion. 
+
+
+
+
